@@ -1,0 +1,18 @@
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Environment variables
+.env
+
+# Local database
+*.db
+*.sqlite3
+
+# macOS
+.DS_Store
+
+# Node.js (future)
+node_modules/
