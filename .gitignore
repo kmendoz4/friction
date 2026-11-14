@@ -16,3 +16,4 @@ __pycache__/
 
 # Node.js (future)
 node_modules/
+frontend/dist/
