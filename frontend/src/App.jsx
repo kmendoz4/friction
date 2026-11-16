@@ -7,6 +7,9 @@ function App() {
   const [error, setError] = useState("");
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [habitName, setHabitName] = useState("");
+  const [habitDescription, setHabitDescription] = useState("");
+  const [hasLevels, setHasLevels] = useState(false);
+  const [habitLevels, setHabitLevels] = useState(["", "", ""]);
   const [isAddingHabit, setIsAddingHabit] = useState(false);
   const [addHabitError, setAddHabitError] = useState("");
   const addHabitButtonRef = useRef(null);
@@ -63,14 +66,14 @@ function App() {
     return () => controller.abort();
   }, []);
 
-  async function addHabit(name) {
+  async function addHabit(habit) {
     try {
       const response = await fetch("/habits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: name }),
+        body: JSON.stringify(habit),
       });
 
       if (!response.ok) {
@@ -122,7 +125,7 @@ function App() {
     }
 
     const focusableElements = dialogRef.current?.querySelectorAll(
-      'button:not([disabled]), input:not([disabled])',
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled])',
     );
     if (!focusableElements?.length) {
       return;
@@ -143,8 +146,19 @@ function App() {
   async function handleAddHabitSubmit(event) {
     event.preventDefault();
     const trimmedName = habitName.trim();
+    const trimmedLevels = habitLevels.map((level) => level.trim());
 
-    if (!trimmedName || isAddingHabitRef.current) {
+    if (isAddingHabitRef.current) {
+      return;
+    }
+
+    if (!trimmedName) {
+      setAddHabitError("Enter a habit name.");
+      return;
+    }
+
+    if (hasLevels && trimmedLevels.some((level) => !level)) {
+      setAddHabitError("Enter a description for all three completion levels.");
       return;
     }
 
@@ -153,7 +167,12 @@ function App() {
     setAddHabitError("");
 
     try {
-      const wasAdded = await addHabit(trimmedName);
+      const wasAdded = await addHabit({
+        name: trimmedName,
+        description: habitDescription.trim(),
+        has_levels: hasLevels,
+        levels: hasLevels ? trimmedLevels : [],
+      });
 
       if (!wasAdded) {
         setAddHabitError("We couldn't add that habit. Please try again.");
@@ -161,6 +180,9 @@ function App() {
       }
 
       setHabitName("");
+      setHabitDescription("");
+      setHasLevels(false);
+      setHabitLevels(["", "", ""]);
       setIsPopupOpen(false);
     } catch (requestError) {
       setAddHabitError(
@@ -244,7 +266,7 @@ function App() {
               </p>
             ) : (
               habits.map((habit, index) => (
-                <HabitCard key={habit.id} habit={habit.name} number={index + 1} />
+                <HabitCard key={habit.id} habit={habit} number={index + 1} />
               ))
             )}
           </div>
@@ -292,6 +314,64 @@ function App() {
                 aria-describedby={addHabitError ? "add-habit-error" : undefined}
                 required
               />
+              <label htmlFor="habit-description">Description (optional)</label>
+              <textarea
+                id="habit-description"
+                name="habitDescription"
+                placeholder="Add a little more detail"
+                value={habitDescription}
+                onChange={(event) => {
+                  setHabitDescription(event.target.value);
+                  setAddHabitError("");
+                }}
+              />
+              <label className="habit-modal__checkbox-label" htmlFor="habit-has-levels">
+                <input
+                  id="habit-has-levels"
+                  name="hasLevels"
+                  type="checkbox"
+                  checked={hasLevels}
+                  aria-expanded={hasLevels}
+                  aria-controls={hasLevels ? "habit-level-fields" : undefined}
+                  onChange={(event) => {
+                    setHasLevels(event.target.checked);
+                    setAddHabitError("");
+                  }}
+                />
+                Use three completion levels
+              </label>
+              {hasLevels && (
+                <fieldset
+                  className="habit-modal__level-fields"
+                  id="habit-level-fields"
+                >
+                  <legend>Completion levels</legend>
+                  {habitLevels.map((level, index) => {
+                    const inputId = `habit-level-${index + 1}`;
+
+                    return (
+                      <div className="habit-modal__level" key={inputId}>
+                        <label htmlFor={inputId}>
+                          Level {index + 1} description
+                        </label>
+                        <input
+                          id={inputId}
+                          name={`level${index + 1}`}
+                          type="text"
+                          value={level}
+                          onChange={(event) => {
+                            const updatedLevels = [...habitLevels];
+                            updatedLevels[index] = event.target.value;
+                            setHabitLevels(updatedLevels);
+                            setAddHabitError("");
+                          }}
+                          required
+                        />
+                      </div>
+                    );
+                  })}
+                </fieldset>
+              )}
               {addHabitError && (
                 <p className="habit-modal__error" id="add-habit-error" role="alert">
                   {addHabitError}
@@ -309,7 +389,7 @@ function App() {
                 <button
                   className="habit-modal__submit"
                   type="submit"
-                  disabled={!habitName.trim() || isAddingHabit}
+                  disabled={isAddingHabit}
                 >
                   {isAddingHabit ? "Adding..." : "Add habit"}
                 </button>
