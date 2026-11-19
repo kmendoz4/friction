@@ -67,31 +67,34 @@ function App() {
   }, []);
 
   async function addHabit(habit) {
-    try {
-      const response = await fetch("/habits", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(habit),
-      });
+    const response = await fetch("/habits", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(habit),
+    });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create habit: ${response.status}`);
-      }
+    const responseData = await response.json();
 
-      const newHabit = await response.json();
-
-      setHabits((previousHabits) => [
-        ...previousHabits,
-        newHabit,
-      ]);
-
-      return true;
-    } catch (error) {
-      console.error("Error adding habit:", error);
-      return false;
+    if (!response.ok) {
+      const detail =
+        typeof responseData?.detail === "string" ? responseData.detail : "";
+      throw new Error(detail || `Failed to create habit: ${response.status}`);
     }
+
+    if (
+      !Number.isInteger(responseData?.id) ||
+      typeof responseData.name !== "string" ||
+      typeof responseData.has_levels !== "boolean" ||
+      !Array.isArray(responseData.levels) ||
+      !responseData.levels.every((level) => typeof level === "string")
+    ) {
+      throw new Error("The server returned an invalid habit response.");
+    }
+
+    setHabits((previousHabits) => [...previousHabits, responseData]);
+    return responseData;
   }
 
   useEffect(() => {
@@ -167,17 +170,12 @@ function App() {
     setAddHabitError("");
 
     try {
-      const wasAdded = await addHabit({
+      await addHabit({
         name: trimmedName,
         description: habitDescription.trim(),
         has_levels: hasLevels,
         levels: hasLevels ? trimmedLevels : [],
       });
-
-      if (!wasAdded) {
-        setAddHabitError("We couldn't add that habit. Please try again.");
-        return;
-      }
 
       setHabitName("");
       setHabitDescription("");

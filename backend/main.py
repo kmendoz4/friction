@@ -1,9 +1,11 @@
-from typing import List, Optional
+from typing import Generator, List, Optional
 
-from fastapi import FastAPI
-from pydantic import BaseModel, Field, model_validator
+from fastapi import Depends, FastAPI
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy.orm import Session
 
-app = FastAPI()
+from backend.database import SessionLocal
+from backend.models import Habit
 
 class HabitCreate(BaseModel):
     name: str
@@ -21,11 +23,30 @@ class HabitCreate(BaseModel):
 
         return self
 
-habits = [
-    {"id": 1, "name": "Exercise", "description": "", "has_levels": False, "levels": []},
-    {"id": 2, "name": "Read", "description": "", "has_levels": True, "levels": ["5 Minutes", "10 Minutes", "20 Minutes"]},
-    {"id": 3, "name": "Journal", "description": "", "has_levels": False, "levels": []}
-]
+
+class HabitResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    has_levels: bool
+    levels: List[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HabitsResponse(BaseModel):
+    habits: List[HabitResponse]
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app = FastAPI()
 
 @app.get("/")
 def root():
@@ -35,21 +56,25 @@ def root():
 def health_check():
     return {"status": "ok"}
 
-@app.get("/habits")
-def get_habits():
-    return {"habits": habits}
+@app.get("/habits", response_model=HabitsResponse)
+def get_habits(db: Session = Depends(get_db)):
+    active_habits = (
+        db.query(Habit)
+        .filter(Habit.deleted_at.is_(None))
+        .order_by(Habit.id)
+        .all()
+    )
+    return {"habits": active_habits}
 
-@app.post("/habits", status_code=201)
-def post_habits(habit: HabitCreate):
-    next_id = max((h["id"] for h in habits), default=0) + 1
-
-    new_habit = {
-        "id": next_id,
-        "name": habit.name,
-        "description": habit.description,
-        "has_levels": habit.has_levels,
-        "levels": habit.levels
-    }
-
-    habits.append(new_habit)
+@app.post("/habits", status_code=201, response_model=HabitResponse)
+def post_habits(habit: HabitCreate, db: Session = Depends(get_db)):
+    new_habit = Habit(
+        name=habit.name,
+        description=habit.description,
+        has_levels=habit.has_levels,
+        levels=habit.levels,
+    )
+    db.add(new_habit)
+    db.commit()
+    db.refresh(new_habit)
     return new_habit

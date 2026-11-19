@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, Boolean, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from backend.database import Base
 
 class Habit(Base):
     __tablename__ = "habits"

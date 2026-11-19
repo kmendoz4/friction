@@ -4,7 +4,7 @@ from datetime import date
 from sqlalchemy import Integer, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from backend.database import Base
 
 
 class Completion(Base):
