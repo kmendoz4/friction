@@ -215,11 +215,6 @@ function App() {
               Small steps count. Make today a day you show up for yourself.
             </p>
           </div>
-          <div className="welcome-panel__decoration" aria-hidden="true">
-            <span className="decoration-ring decoration-ring--outer" />
-            <span className="decoration-ring decoration-ring--inner" />
-            <span className="decoration-dot" />
-          </div>
         </section>
 
         <section className="habits-section" aria-labelledby="habits-title">

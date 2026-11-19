@@ -55,6 +55,7 @@ function HabitCard({ habit, number }) {
               const level = index + 1;
               const levelDescription = habit.levels?.[index];
               const isSelected = completionLevel === level;
+              const isCompleted = completionLevel >= level;
 
               return (
                 <button
@@ -77,7 +78,20 @@ function HabitCard({ habit, number }) {
                   <span
                     className={`completion-dot${completionLevel >= level ? " completion-dot--filled" : ""}`}
                     aria-hidden="true"
-                  />
+                  >
+                    {isCompleted && (
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="m3.25 8.25 3 3 6.5-6.5" />
+                      </svg>
+                    )}
+                  </span>
                 </button>
               );
             })}
@@ -94,6 +108,7 @@ function HabitCard({ habit, number }) {
             }}
           >
             <svg
+              className="habit-card__expand-icon"
               aria-hidden="true"
               viewBox="0 0 24 24"
               fill="none"
